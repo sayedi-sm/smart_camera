@@ -1,14 +1,11 @@
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:smart_camera/camera_provider.dart';
-import 'package:smart_camera/screens/camera_screen.dart';
+import 'package:smart_camera/providers/camera_provider.dart';
 import 'package:smart_camera/screens/home_screen.dart';
-late List<CameraDescription> cameras;
+import 'package:smart_camera/screens/smart_camera_screen.dart';
 
 void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-  cameras = await availableCameras();
   runApp(const MyApp());
 }
 
@@ -25,6 +22,9 @@ class MyApp extends StatelessWidget {
         theme: ThemeData(
           primarySwatch: Colors.blue,
         ),
+        routes: {
+          SmartCameraScreen.routeName: (_) => const SmartCameraScreen(),
+        },
         home: const HomeScreen(),
       ),
     );
