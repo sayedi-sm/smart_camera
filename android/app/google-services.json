@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "512312335068",
+    "project_id": "smart-camera-60c27",
+    "storage_bucket": "smart-camera-60c27.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:512312335068:android:def52f321c44d37cbaf219",
+        "android_client_info": {
+          "package_name": "com.smsayedi.smart_camera"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "512312335068-ln5be9qomjcas3ien01lrdsf93bnqf48.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAa0A2KFZpebV1MwxwGYGzRN50ik4AU1UY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "512312335068-ln5be9qomjcas3ien01lrdsf93bnqf48.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
