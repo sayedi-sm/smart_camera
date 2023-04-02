@@ -47,6 +47,7 @@ class _SmartCameraScreenState extends State<SmartCameraScreen> {
                     if (snapshot.connectionState == ConnectionState.done) {
                       return Stack(
                         children: [
+                          const SizedBox.expand(),
                           CameraPreview(
                             cameraProvider.cameraController,
                             child: cameraProvider.detection != null
@@ -72,6 +73,14 @@ class _SmartCameraScreenState extends State<SmartCameraScreen> {
                                 ElevatedButton(
                                   onPressed: cameraProvider.zoomIn,
                                   child: const Text('Zoom in'),
+                                ),
+                                ElevatedButton(
+                                  onPressed: cameraProvider.zoomOut,
+                                  child: const Text('Take photo'),
+                                ),
+                                ElevatedButton(
+                                  onPressed: cameraProvider.zoomIn,
+                                  child: const Text('Auto zoom'),
                                 ),
                               ],
                             ),

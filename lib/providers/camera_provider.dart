@@ -54,9 +54,9 @@ class CameraProvider extends ChangeNotifier {
   Future<void> _runModelOnStreamImages() async {
     if (_cameraImage != null) {
       int time1 = DateTime.now().millisecondsSinceEpoch;
-
+      InputImage inputImage = _processCameraImage();
       final List<DetectedObject> objects =
-          await _objectDetector!.processImage(_processCameraImage());
+          await _objectDetector!.processImage(inputImage);
       int time2 = DateTime.now().millisecondsSinceEpoch;
       print('Time inside run model: ${time2 - time1} milli secs!');
 
@@ -64,9 +64,11 @@ class CameraProvider extends ChangeNotifier {
         DetectedObject detectedObject = objects.first;
         detection = detectedObject.boundingBox;
         print('Detection: $detection');
-        Label label = detectedObject.labels.first;
-        print(
-            'Label: ${label.text}\nConfidence: ${label.confidence}\nBounding box: $detection');
+        if (detectedObject.labels.isNotEmpty) {
+          Label label = detectedObject.labels.first;
+          print(
+              'Label: ${label.text}\nConfidence: ${label.confidence}\nBounding box: $detection');
+        }
       } else {
         detection = null;
       }
