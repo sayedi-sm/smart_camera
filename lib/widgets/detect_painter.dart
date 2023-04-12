@@ -7,7 +7,6 @@ class DetectPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    print('Painted Rect: $detection');
     canvas.drawRect(
       detection,
       Paint()

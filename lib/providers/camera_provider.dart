@@ -14,17 +14,19 @@ class CameraProvider extends ChangeNotifier {
   late CameraController cameraController;
   late Future<void> cameraInitializationFuture;
 
-  CameraImage? _cameraImage;
-  Rect? detection;
   ObjectDetector? _objectDetector;
-  Timer? _timer;
+  CameraImage? _cameraImage;
+  XFile? _pictureFile;
 
-  bool isPrepared = false;
-  double _zoomLevel = 1;
-  double? _maxZoomLevel;
-
+  Rect? detection;
   Size? deviceSize;
-  XFile? pictureFile;
+  double? _maxZoomLevel;
+  bool isCameraPrepared = false;
+
+  Timer? _runModelTimer;
+  Timer? _zoomTimer;
+
+  XFile? get pictureFile => _pictureFile;
 
   Future<void> init() async {
     _initializeModel();
@@ -35,61 +37,34 @@ class CameraProvider extends ChangeNotifier {
       enableAudio: false,
     );
     cameraInitializationFuture = cameraController.initialize().then((value) {
-      _getMaxZoomLevel();
-      _startImageStream();
+      _calculateMaxZoomLevel();
     });
 
-    isPrepared = true;
+    isCameraPrepared = true;
     notifyListeners();
-    _startTimer();
-  }
-
-  void _startTimer() {
-    _timer = Timer.periodic(const Duration(milliseconds: 450), (timer) {
-      _runModelOnStreamImages();
-    });
   }
 
   Future<void> _startImageStream() {
-    return cameraController.startImageStream((image) {
-      print('inside startImageStream');
-      _cameraImage = image;
-      print('image width: ${_cameraImage!.height}');
-      print('image height: ${_cameraImage!.width}');
-    });
+    return cameraController.startImageStream((image) => _cameraImage = image);
   }
 
   Future<void> _runModelOnStreamImages() async {
     if (_cameraImage != null) {
-      int time1 = DateTime.now().millisecondsSinceEpoch;
       InputImage inputImage = _processCameraImage();
       final List<DetectedObject> objects =
           await _objectDetector!.processImage(inputImage);
-      int time2 = DateTime.now().millisecondsSinceEpoch;
-      print('Time inside run model: ${time2 - time1} milli secs!');
       if (objects.isNotEmpty) {
-        DetectedObject detectedObject = objects.first;
-        detection = detectedObject.boundingBox;
+        detection = objects.first.boundingBox;
         if (deviceSize!.width - detection!.width <= 50 ||
             deviceSize!.height - detection!.height <= 50) {
-          print('inside: Device width: ${deviceSize?.width}');
-          print('inside: Detect width: ${detection?.width}');
-          print(
-              'time to take picture: ${deviceSize!.width - detection!.width}');
-          _timer?.cancel();
+          _runModelTimer?.cancel();
+          _zoomTimer?.cancel();
           if (cameraController.value.isStreamingImages) {
             await cameraController.stopImageStream();
           }
-          pictureFile = await cameraController.takePicture();
+          _pictureFile = await cameraController.takePicture();
           notifyListeners();
-          print('picture path is ${pictureFile?.path}');
-        }
-        print('Detection width: ${detection?.width}');
-        print('Detection: $detection');
-        if (detectedObject.labels.isNotEmpty) {
-          Label label = detectedObject.labels.first;
-          print(
-              'Label: ${label.text}\nConfidence: ${label.confidence}\nBounding box: $detection');
+          return;
         }
       } else {
         detection = null;
@@ -99,7 +74,6 @@ class CameraProvider extends ChangeNotifier {
   }
 
   InputImage _processCameraImage() {
-    int time1 = DateTime.now().millisecondsSinceEpoch;
     final WriteBuffer allBytes = WriteBuffer();
     for (final Plane plane in _cameraImage!.planes) {
       allBytes.putUint8List(plane.bytes);
@@ -135,8 +109,6 @@ class CameraProvider extends ChangeNotifier {
 
     final inputImage =
         InputImage.fromBytes(bytes: bytes, inputImageData: inputImageData);
-    int time2 = DateTime.now().millisecondsSinceEpoch;
-    print('Time inside processImage: ${time2 - time1} milli secs!');
     return inputImage;
   }
 
@@ -169,51 +141,66 @@ class CameraProvider extends ChangeNotifier {
     _objectDetector = ObjectDetector(options: options);
   }
 
-  Future<void> _getMaxZoomLevel() async {
+  Future<void> _calculateMaxZoomLevel() async {
     _maxZoomLevel ??= await cameraController.getMaxZoomLevel();
   }
 
-  void autozoomIn() async {
-    for (int i = 4; i <= _maxZoomLevel!.toInt() * 4; i++) {
-      print('index is $i');
-      await Future.delayed(
-        const Duration(milliseconds: 450),
-        () async {
-          await cameraController.setZoomLevel(i / 4);
-          print('zoom level: ${i / 4}');
-        },
-      );
-    }
+  void _startTimer() {
+    _runModelTimer = Timer.periodic(const Duration(milliseconds: 450), (timer) {
+      _runModelOnStreamImages();
+    });
   }
 
-  void autozoomOut() {
+  void autozoom() async {
+    _startImageStream();
+    _startTimer();
+    await Future.delayed(
+      const Duration(seconds: 1),
+      () {
+        int i = 4;
+        _zoomTimer = Timer.periodic(
+          const Duration(milliseconds: 450),
+          (timer) {
+            if (i <= _maxZoomLevel!.toInt() * 4 && pictureFile == null) {
+              cameraController.setZoomLevel(i / 4);
+              i++;
+            } else {
+              timer.cancel();
+            }
+          },
+        );
+      },
+    );
+  }
+
+  void _resetZoom() {
     cameraController.setZoomLevel(1);
-    print('zoom reset');
   }
-
-  double get zoomLevel => _zoomLevel;
 
   void saveToGallery({required VoidCallback onSaveComplete}) async {
-    await GallerySaver.saveImage((pictureFile?.path)!,
-        albumName: 'Smart Camera');
+    await GallerySaver.saveImage(
+      (_pictureFile?.path)!,
+      albumName: 'Smart Camera',
+    );
     discardPhoto();
     onSaveComplete();
   }
 
   void discardPhoto() {
-    pictureFile = null;
+    _pictureFile = null;
+    detection = null;
+    _cameraImage = null;
     notifyListeners();
-    _startImageStream();
-    _startTimer();
+    _resetZoom();
   }
 
   void freeResources() {
     cameraController.dispose();
     _objectDetector?.close();
-    _timer?.cancel();
+    _runModelTimer?.cancel();
+    _zoomTimer?.cancel();
     detection = null;
     _cameraImage = null;
-    _zoomLevel = 1;
-    pictureFile = null;
+    _pictureFile = null;
   }
 }
