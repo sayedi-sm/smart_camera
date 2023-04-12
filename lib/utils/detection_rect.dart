@@ -1,7 +1,7 @@
 import 'dart:ui' as ui;
 
 extension DetectionRect on ui.Rect {
-  ui.Rect operator /(double value) {
-    return ui.Rect.fromLTRB(left / value, top / value, right / value, bottom / value);
+  ui.Rect operator /(double operand) {
+    return ui.Rect.fromLTRB(left / operand, top / operand, right / operand, bottom / operand);
   }
 }

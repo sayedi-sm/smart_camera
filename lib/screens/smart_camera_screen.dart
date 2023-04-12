@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -35,6 +37,7 @@ class _SmartCameraScreenState extends State<SmartCameraScreen> {
   @override
   Widget build(BuildContext context) {
     pixelRatio ??= MediaQuery.of(context).devicePixelRatio;
+    cameraProvider.deviceSize ??= MediaQuery.of(context).size * pixelRatio!;
     print('Device width: ${MediaQuery.of(context).size.width * pixelRatio!}');
     print('Device height: ${MediaQuery.of(context).size.height * pixelRatio!}');
     return Scaffold(
@@ -59,6 +62,93 @@ class _SmartCameraScreenState extends State<SmartCameraScreen> {
                                   )
                                 : null,
                           ),
+                          if (cameraProvider.pictureFile != null)
+                            Positioned(
+                              top: MediaQuery.of(context).viewPadding.top + 24,
+                              right: 24,
+                              child: Stack(
+                                children: [
+                                  Column(
+                                    children: [
+                                      SizedBox(
+                                        width: 100,
+                                        child: AspectRatio(
+                                          aspectRatio: 1 /
+                                              cameraProvider.cameraController
+                                                  .value.aspectRatio,
+                                          child: Container(
+                                            decoration: BoxDecoration(
+                                              image: DecorationImage(
+                                                image: FileImage(
+                                                  File(
+                                                    (cameraProvider
+                                                            .pictureFile)!
+                                                        .path,
+                                                  ),
+                                                ),
+                                              ),
+                                              borderRadius:
+                                                  BorderRadius.circular(12),
+                                              border: Border.all(
+                                                  color: Colors.white),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      SizedBox(
+                                        width: 100,
+                                        child: Row(
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.spaceAround,
+                                          children: [
+                                            GestureDetector(
+                                              onTap:
+                                                  cameraProvider.discardPhoto,
+                                              child: CircleAvatar(
+                                                radius: 14,
+                                                backgroundColor: Colors.black
+                                                    .withOpacity(0.5),
+                                                child: const Icon(
+                                                  Icons.close,
+                                                  color: Colors.white,
+                                                  size: 18,
+                                                ),
+                                              ),
+                                            ),
+                                            GestureDetector(
+                                              onTap: () {
+                                                cameraProvider.saveToGallery(
+                                                  onSaveComplete: () =>
+                                                      ScaffoldMessenger.of(
+                                                              context)
+                                                          .showSnackBar(
+                                                    const SnackBar(
+                                                      content: Text(
+                                                          'Image saved to gallery!'),
+                                                    ),
+                                                  ),
+                                                );
+                                              },
+                                              child: CircleAvatar(
+                                                radius: 14,
+                                                backgroundColor: Colors.black
+                                                    .withOpacity(0.5),
+                                                child: const Icon(
+                                                  Icons.save_alt,
+                                                  color: Colors.white,
+                                                  size: 18,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
                           Positioned(
                             bottom: 32,
                             left: 0,
@@ -67,20 +157,12 @@ class _SmartCameraScreenState extends State<SmartCameraScreen> {
                               mainAxisAlignment: MainAxisAlignment.spaceAround,
                               children: [
                                 ElevatedButton(
-                                  onPressed: cameraProvider.zoomOut,
+                                  onPressed: cameraProvider.autozoomOut,
                                   child: const Text('Zoom out'),
                                 ),
                                 ElevatedButton(
-                                  onPressed: cameraProvider.zoomIn,
+                                  onPressed: cameraProvider.autozoomIn,
                                   child: const Text('Zoom in'),
-                                ),
-                                ElevatedButton(
-                                  onPressed: cameraProvider.zoomOut,
-                                  child: const Text('Take photo'),
-                                ),
-                                ElevatedButton(
-                                  onPressed: cameraProvider.zoomIn,
-                                  child: const Text('Auto zoom'),
                                 ),
                               ],
                             ),

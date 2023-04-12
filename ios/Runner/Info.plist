@@ -33,6 +33,8 @@
     <key>NSMicrophoneUsageDescription</key>
     <string>Smart Camera needs to access your microphone!</string>
 	<key>UISupportedInterfaceOrientations</key>
+    <string>Smart Camera needs to access your gallery!</string>
+	<key>NSPhotoLibraryUsageDescription</key>
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>
 		<string>UIInterfaceOrientationLandscapeLeft</string>

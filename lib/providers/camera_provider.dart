@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:camera/camera.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
+import 'package:gallery_saver/gallery_saver.dart';
 import 'package:google_mlkit_object_detection/google_mlkit_object_detection.dart';
 import 'package:path/path.dart';
 import 'package:path_provider/path_provider.dart';
@@ -22,6 +23,9 @@ class CameraProvider extends ChangeNotifier {
   double _zoomLevel = 1;
   double? _maxZoomLevel;
 
+  Size? deviceSize;
+  XFile? pictureFile;
+
   Future<void> init() async {
     _initializeModel();
     _cameras = await availableCameras();
@@ -37,7 +41,11 @@ class CameraProvider extends ChangeNotifier {
 
     isPrepared = true;
     notifyListeners();
-    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+    _startTimer();
+  }
+
+  void _startTimer() {
+    _timer = Timer.periodic(const Duration(milliseconds: 450), (timer) {
       _runModelOnStreamImages();
     });
   }
@@ -59,10 +67,24 @@ class CameraProvider extends ChangeNotifier {
           await _objectDetector!.processImage(inputImage);
       int time2 = DateTime.now().millisecondsSinceEpoch;
       print('Time inside run model: ${time2 - time1} milli secs!');
-
       if (objects.isNotEmpty) {
         DetectedObject detectedObject = objects.first;
         detection = detectedObject.boundingBox;
+        if (deviceSize!.width - detection!.width <= 50 ||
+            deviceSize!.height - detection!.height <= 50) {
+          print('inside: Device width: ${deviceSize?.width}');
+          print('inside: Detect width: ${detection?.width}');
+          print(
+              'time to take picture: ${deviceSize!.width - detection!.width}');
+          _timer?.cancel();
+          if (cameraController.value.isStreamingImages) {
+            await cameraController.stopImageStream();
+          }
+          pictureFile = await cameraController.takePicture();
+          notifyListeners();
+          print('picture path is ${pictureFile?.path}');
+        }
+        print('Detection width: ${detection?.width}');
         print('Detection: $detection');
         if (detectedObject.labels.isNotEmpty) {
           Label label = detectedObject.labels.first;
@@ -151,23 +173,39 @@ class CameraProvider extends ChangeNotifier {
     _maxZoomLevel ??= await cameraController.getMaxZoomLevel();
   }
 
-  void zoomIn() {
-    if (++_zoomLevel <= _maxZoomLevel!) {
-      cameraController.setZoomLevel(_zoomLevel);
-    } else {
-      cameraController.setZoomLevel(_zoomLevel = _maxZoomLevel!);
+  void autozoomIn() async {
+    for (int i = 4; i <= _maxZoomLevel!.toInt() * 4; i++) {
+      print('index is $i');
+      await Future.delayed(
+        const Duration(milliseconds: 450),
+        () async {
+          await cameraController.setZoomLevel(i / 4);
+          print('zoom level: ${i / 4}');
+        },
+      );
     }
   }
 
-  void zoomOut() {
-    if (--_zoomLevel >= 1) {
-      cameraController.setZoomLevel(_zoomLevel);
-    } else {
-      cameraController.setZoomLevel(_zoomLevel = 1);
-    }
+  void autozoomOut() {
+    cameraController.setZoomLevel(1);
+    print('zoom reset');
   }
 
   double get zoomLevel => _zoomLevel;
+
+  void saveToGallery({required VoidCallback onSaveComplete}) async {
+    await GallerySaver.saveImage((pictureFile?.path)!,
+        albumName: 'Smart Camera');
+    discardPhoto();
+    onSaveComplete();
+  }
+
+  void discardPhoto() {
+    pictureFile = null;
+    notifyListeners();
+    _startImageStream();
+    _startTimer();
+  }
 
   void freeResources() {
     cameraController.dispose();
@@ -176,5 +214,6 @@ class CameraProvider extends ChangeNotifier {
     detection = null;
     _cameraImage = null;
     _zoomLevel = 1;
+    pictureFile = null;
   }
 }
